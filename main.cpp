@@ -56,28 +56,27 @@ public:
 class LatencyRunner : public QThread {
     Q_OBJECT
 
-    uint32_t* prealloc_arr = nullptr;
 
     void run() override {
         static std::vector<int> default_test_sizes { 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 600, 768, 1024, 1536, 2048,
             3072, 4096, 5120, 6144, 8192, 10240, 12288, 16384, 24567, 32768, 65536, 98304, 131072, 262144, 393216, 524288, 1048576 }; //2097152 };
+        uint32_t* prealloc_arr = nullptr;
         if (hugePages) {
             prealloc_arr = preallocate_arr(default_test_sizes.back());
             if (prealloc_arr == (void *)-1) { // on failure, mmap will return MAP_FAILED, or (void *)-1
-                fprintf(stderr, "Failed to mmap huge pages, errno %d = %s\nWill try to use madvise\n", errno, strerror(errno));
                 prealloc_arr = nullptr;
                 return; //TODO error handling;
             }
         }
         for (int i = 0; i < default_test_sizes.size(); i++){
             if (isInterruptionRequested()) {
-                if (prealloc_arr) {
-                    free_preallocate_arr(prealloc_arr, default_test_sizes.back());
-                }
                 break;
             }
             float latency = RunTest(default_test_sizes[i], numIterations, prealloc_arr);
             emit resultReady(i, default_test_sizes[i], latency);
+        }
+        if (prealloc_arr) {
+            free_preallocate_arr(prealloc_arr, default_test_sizes.back());
         }
     }
 public:
@@ -110,8 +109,7 @@ public:
             a->setData(QString("%1 KB").arg(size));
             auto b = new QStandardItem{QString::number(latency)};
             b->setData(QString("%1 ns").arg(latency));
-            model->setItem(idx, 0, a);
-            model->setItem(idx, 1, b);
+            model->appendRow({a, b});
     }
 
     MemoryLatency(Results& results): results(results) {
