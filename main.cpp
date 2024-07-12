@@ -52,11 +52,8 @@ public:
     }
 };
 
-
 class LatencyRunner : public QThread {
     Q_OBJECT
-
-
     void run() override {
         static std::vector<int> default_test_sizes { 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 600, 768, 1024, 1536, 2048,
             3072, 4096, 5120, 6144, 8192, 10240, 12288, 16384, 24567, 32768, 65536, 98304, 131072, 262144, 393216, 524288, 1048576 }; //2097152 };
@@ -68,12 +65,12 @@ class LatencyRunner : public QThread {
                 return; //TODO error handling;
             }
         }
-        for (int i = 0; i < default_test_sizes.size(); i++){
+        for (const auto size : default_test_sizes){
             if (isInterruptionRequested()) {
                 break;
             }
-            float latency = RunTest(default_test_sizes[i], numIterations, prealloc_arr);
-            emit resultReady(i, default_test_sizes[i], latency);
+            float latency = RunTest(size, numIterations, prealloc_arr);
+            emit resultReady(size, latency);
         }
         if (prealloc_arr) {
             free_preallocate_arr(prealloc_arr, default_test_sizes.back());
@@ -83,7 +80,7 @@ public:
     bool hugePages = false;
     unsigned int numIterations = 100000000;
 signals:
-    void resultReady(int idx, int size, float latency);
+    void resultReady(int size, float latency);
 };
 
 class MemoryLatency : public QObject {
