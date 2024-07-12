@@ -9,9 +9,9 @@ Pane {
     id: root
     property alias hasAvx : avxButton.enabled
     property alias hasAvx512 : avx512Button.enabled
-    required property QtObject tableModel
-    required property QtObject resultsModel // ListModel<TableModel>
-    required property QtObject memLat // Test runner
+     property QtObject tableModel
+     property QtObject resultsModel // ListModel<TableModel>
+     property QtObject memLat // Test runner
 
     RowLayout {
         id: mainLayout

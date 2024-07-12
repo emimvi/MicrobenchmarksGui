@@ -157,9 +157,9 @@ public:
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-
+    qputenv("QSG_RHI_BACKEND", "opengl"); // Window drag stutters with the default D3D backend on Windows
     QQmlApplicationEngine engine;
-    const QUrl url(u"qrc:/untitled2/App.qml"_qs);
+    const QUrl url(u"qrc:qt/qml/untitled2/App.qml"_qs);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
         &app, []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
