@@ -9,29 +9,15 @@ Pane {
     id: root
     property alias hasAvx : avxButton.enabled
     property alias hasAvx512 : avx512Button.enabled
-     property QtObject tableModel
-     property QtObject resultsModel // ListModel<TableModel>
-     property QtObject memLat // Test runner
+    property QtObject tableModel
+    property QtObject resultsModel // ListModel<TableModel>
+    property QtObject memLat // Test runner
 
     RowLayout {
         id: mainLayout
         anchors.fill: parent
         ColumnLayout {
             Layout.fillWidth: false
-            GroupBox {
-                enabled: memBandwidthButton.checked
-                Layout.fillWidth: true
-                title: "Threads: " + threadSlider.value
-                Slider {
-                    id: threadSlider
-                    anchors.fill: parent
-                    from: 1
-                    to: 4
-                    snapMode: Slider.SnapAlways
-                    stepSize: 1
-                }
-            }
-
             GroupBox {
                 Layout.fillWidth: true
                 title: "Test type"
@@ -47,125 +33,137 @@ Pane {
                     }
                 }
             }
-            GroupBox {
-                enabled: memBandwidthButton.checked
-                Layout.fillWidth: true
-                title: "Threading Mode"
+            StackLayout {
+                currentIndex: memLatencyButton.checked ? 1 : 0
                 ColumnLayout {
-                    RadioButton {
-                        checked: true
-                        text: "Private array per thread"
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "Threads: " + threadSlider.value
+                        Slider {
+                            id: threadSlider
+                            anchors.fill: parent
+                            from: 1
+                            to: 4
+                            snapMode: Slider.SnapAlways
+                            stepSize: 1
+                        }
                     }
-                    RadioButton {
-                        text: "One array shared by all threads"
+
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "Threading Mode"
+                        ColumnLayout {
+                            RadioButton {
+                                checked: true
+                                text: "Private array per thread"
+                            }
+                            RadioButton {
+                                text: "One array shared by all threads"
+                            }
+                        }
+                    }
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "Access Mode"
+                        ColumnLayout {
+                            RadioButton {
+                                checked: true
+                                text: "Data Read"
+                            }
+                            RadioButton {
+                                text: "Data Non-Temporal Read"
+                            }
+                            RadioButton {
+                                text: "Data Write"
+                            }
+                            RadioButton {
+                                text: "Data Non-Temporal Write"
+                            }
+                            RadioButton {
+                                text: "Data Read-Modify-Write (Add)"
+                            }
+                            RadioButton {
+                                text: "Instruction Fetch"
+                            }
+                        }
+                    }
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "Test Method"
+                        ColumnLayout {
+                            RadioButton {
+                                checked: true
+                                text: "SSE (128-bit)"
+                            }
+                            RadioButton {
+                                id: avxButton
+                                text: "AVX (256-bit)"
+                            }
+                            RadioButton {
+                                id: avx512Button
+                                text: "AVX-512 (512-bit)"
+                            }
+                            RadioButton {
+                                text: "MMX (64-bit)"
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Text {
+                            text: "Base Data to Transfer:"
+                        }
+                        TextField {
+                            text: "32"
+                        }
+                        Text {
+                            text: "GB"
+                        }
                     }
                 }
-            }
-            GroupBox {
-                visible: !memLatencyButton.checked
-                Layout.fillWidth: true
-                title: "Access Mode"
                 ColumnLayout {
-                    RadioButton {
-                        checked: true
-                        text: "Data Read"
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "Access Mode"
+                        ColumnLayout {
+                            RadioButton {
+                                checked: true
+                                text: "Simple Addressing (ASM)"
+                            }
+                            RadioButton {
+                                text: "Indexed Adressing (C)"
+                            }
+                        }
                     }
-                    RadioButton {
-                        text: "Data Non-Temporal Read"
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "Paging Mode"
+                        ColumnLayout {
+                            RadioButton {
+                                id : defaultPagesButton
+                                checked: true
+                                text: "Default (4 KB Pages)"
+                            }
+                            RadioButton {
+                                text: "Large Pages (2 MB Pages)"
+                            }
+                        }
                     }
-                    RadioButton {
-                        text: "Data Write"
-                    }
-                    RadioButton {
-                        text: "Data Non-Temporal Write"
-                    }
-                    RadioButton {
-                        text: "Data Read-Modify-Write (Add)"
-                    }
-                    RadioButton {
-                        text: "Instruction Fetch"
-                    }
-                }
-            }
-            GroupBox {
-                visible: memLatencyButton.checked
-                Layout.fillWidth: true
-                title: "Access Mode"
-                ColumnLayout {
-                    RadioButton {
-                        checked: true
-                        text: "Simple Addressing (ASM)"
-                    }
-                    RadioButton {
-                        text: "Indexed Adressing (C)"
-                    }
-                }
-            }
-            GroupBox {
-                visible: !memLatencyButton.checked
-                Layout.fillWidth: true
-                title: "Test Method"
-                ColumnLayout {
-                    RadioButton {
-                        checked: true
-                        text: "SSE (128-bit)"
-                    }
-                    RadioButton {
-                        id: avxButton
-                        text: "AVX (256-bit)"
-                    }
-                    RadioButton {
-                        id: avx512Button
-                        text: "AVX-512 (512-bit)"
-                    }
-                    RadioButton {
-                        text: "MMX (64-bit)"
+                    RowLayout {
+                        Text {
+                            text: "Base Iterations:"
+                        }
+                        TextField {
+                            id: iterationsText
+                            text: "200000000"
+                        }
+                        Text {
+                            text: "times"
+                        }
                     }
                 }
             }
 
-            GroupBox {
-                visible: memLatencyButton.checked
-                Layout.fillWidth: true
-                title: "Paging Mode"
-                ColumnLayout {
-                    RadioButton {
-                        id : defaultPagesButton
-                        checked: true
-                        text: "Default (4 KB Pages)"
-                    }
-                    RadioButton {
-                        text: "Large Pages (2 MB Pages)"
-                    }
-                }
-            }
-
-            RowLayout {
-                visible: !memLatencyButton.checked
-                Text {
-                    text: "Base Data to Transfer:"
-                }
-                TextField {
-                    text: "32"
-                }
-                Text {
-                    text: "GB"
-                }
-            }
-
-            RowLayout {
-                visible: memLatencyButton.checked
-                Text {
-                    text: "Base Iterations:"
-                }
-                TextField {
-                    id: iterationsText
-                    text: "200000000"
-                }
-                Text {
-                    text: "times"
-                }
-            }
             Rectangle {
                 Layout.fillHeight: true
             }
@@ -182,6 +180,7 @@ Pane {
                 }
             }
         }
+
         ColumnLayout {
             Layout.fillWidth: false
             RowLayout {
@@ -249,20 +248,20 @@ Pane {
                                 Label { text: "Red" }
                                 Item { Layout.fillWidth:  true }
                                 TextField { text: "50"
-                                Layout.preferredWidth: 40
+                                    Layout.preferredWidth: 40
                                 }
                             }
                             RowLayout {
                                 Label { text: "Green" }
                                 Item { Layout.fillWidth:  true }
                                 TextField { text: "50"
-                                Layout.preferredWidth: 40}
+                                    Layout.preferredWidth: 40}
                             }
                             RowLayout {
                                 Label { text: "Blue" }
                                 Item { Layout.fillWidth:  true }
                                 TextField { text: "50"
-                                Layout.preferredWidth: 40}
+                                    Layout.preferredWidth: 40}
                             }
                             Rectangle {
                                 Layout.fillHeight: true
@@ -324,6 +323,7 @@ Pane {
                 }
                 ScrollView {
                     Layout.preferredHeight: 100
+                    Layout.preferredWidth: 100
                     Layout.fillHeight: true
                     Layout.fillWidth: true
                     TextArea {
@@ -379,8 +379,8 @@ Pane {
                         object.series = series
 
                         series.pointAdded.connect(i => {
-                            axisY.max = Math.max(axisY.max, series.at(i).y)
-                        })
+                                          axisY.max = Math.max(axisY.max, series.at(i).y)
+                                      })
 
                         //var minX = axisX.min
                         //var maxX = axisX.max
