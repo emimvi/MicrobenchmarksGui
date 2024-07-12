@@ -19,7 +19,7 @@ qt_add_executable(appuntitled2
 qt_add_qml_module(appuntitled2
     URI untitled2
     VERSION 1.0
-    QML_FILES Main.qml App.qml 
+    QML_FILES Main.qml App.qml ResultPane.qml
     SOURCES MemoryLatency.h
 )
 
