@@ -13,28 +13,30 @@ Pane {
     property QtObject resultsModel // ListModel<TableModel>
     property QtObject memLat // Test runner
 
-    RowLayout {
-        id: mainLayout
+    ColumnLayout {
         anchors.fill: parent
-        ColumnLayout {
-            Layout.fillWidth: false
-            GroupBox {
+        RowLayout {
+            Layout.fillHeight: false
+            TabBar {
                 Layout.fillWidth: true
-                title: "Test type"
-                ColumnLayout {
-                    RadioButton {
-                        checked : true
-                        id : memBandwidthButton
-                        text: "Memory Bandwith"
-                    }
-                    RadioButton {
-                        id: memLatencyButton
-                        text: "Memory Latency"
-                    }
+                id : tabBar
+                TabButton {
+                    width: implicitWidth
+                    text: 'Memory Bandwidth'
+                }
+                TabButton {
+                    width: implicitWidth
+                    text: 'Memory Latency'
                 }
             }
+        }
+
+    RowLayout {
+        id: mainLayout
+        ColumnLayout {
+            Layout.fillWidth: false
             StackLayout {
-                currentIndex: memLatencyButton.checked ? 1 : 0
+                currentIndex: tabBar.currentIndex
                 ColumnLayout {
                     GroupBox {
                         Layout.fillWidth: true
@@ -323,7 +325,7 @@ Pane {
                 }
                 ScrollView {
                     Layout.preferredHeight: 100
-                    Layout.preferredWidth: 100
+                    Layout.preferredWidth: 200
                     Layout.fillHeight: true
                     Layout.fillWidth: true
                     TextArea {
@@ -411,5 +413,6 @@ Pane {
                 }
             }
         }
+    }
     }
 }
