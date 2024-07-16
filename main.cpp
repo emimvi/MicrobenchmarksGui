@@ -85,7 +85,7 @@ class LatencyRunner : public TestRunner {
             if (isInterruptionRequested()) {
                 break;
             }
-            float latency = RunTest(size, numIterations, prealloc_arr);
+            float latency = asmTest ? RunAsmLatencyTest(size, numIterations) : RunTest(size, numIterations, prealloc_arr);
             emit resultReady(size, latency);
         }
         if (prealloc_arr) {
@@ -93,16 +93,18 @@ class LatencyRunner : public TestRunner {
         }
     }
 public:
-    Q_INVOKABLE void run(bool hugePages, size_t numIterations) {
+    Q_INVOKABLE void run(bool hugePages, bool asmTest, size_t numIterations) {
         if (isRunning()) {
             throw std::logic_error("Another run already in progress");
         }
         this->hugePages = hugePages;
         this->numIterations = numIterations;
+        this->asmTest = asmTest;
         start();
     }
 
     bool hugePages = false;
+    bool asmTest = false;
     unsigned int numIterations = 100000000;
 };
 

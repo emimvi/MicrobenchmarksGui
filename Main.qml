@@ -182,6 +182,7 @@ Pane {
                         title: "Access Mode"
                         ColumnLayout {
                             RadioButton {
+                                id : asmAccessButton
                                 checked: true
                                 text: "Simple Addressing (ASM)"
                             }
@@ -226,12 +227,17 @@ Pane {
                 Button {
                     enabled : !memLatRunner.running
                     text: "Run"
-                    onClicked: memLatRunner.run(!defaultPagesButton.checked, Number(iterationsText.text))
+                    onClicked:  {
+                        cancelButton.activeRunner = memLatRunner
+                        memLatRunner.run(!defaultPagesButton.checked, asmAccessButton.checked, Number(iterationsText.text))
+                    }
                 }
                 Button {
-                    enabled : memLatRunner.running
+                    id : cancelButton
+                    property QtObject activeRunner;
+                    enabled : activeRunner?.running ?? false
                     text: "Cancel Run"
-                    onClicked: memLatRunner.cancelRun()
+                    onClicked: activeRunner?.cancelRun()
                 }
             }
         }
