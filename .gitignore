@@ -390,3 +390,4 @@ FodyWeavers.xsd
 .idea/
 *.sln.iml
 build/
+linuxbuild

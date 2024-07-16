@@ -1,18 +1,33 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(untitled2 VERSION 0.1 LANGUAGES CXX C ASM_NASM)
+project(untitled2 VERSION 0.1 LANGUAGES CXX C)
+if (WIN32)
+    enable_language(ASM_NASM)
+else()
+    enable_language(ASM)
+endif()
+
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z noexecstack")
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Widgets Charts)
-qt_standard_project_setup(REQUIRES 6.5)
+# Silence "missing .note.GNU-stack section implies executable stack"
+if (LINUX)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -z noexecstack")
+endif()
+
+find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Widgets Charts)
+qt_standard_project_setup(REQUIRES 6.4)
 
 qt_add_executable(appuntitled2
-    main.cpp
-    MemoryLatency.c
-    #MemoryLatency_x86.s
-    MemoryLatencyFunctions.asm
+        main.cpp
+        $<$<PLATFORM_ID:Linux>:
+        MemoryLatency_x86.s
+        MemoryLatencyLinux.c
+        >
+        $<$<PLATFORM_ID:Windows>:
+        MemoryLatency.c
+        MemoryLatencyFunctions.asm
+        >
 )
 
 
@@ -21,6 +36,7 @@ qt_add_qml_module(appuntitled2
     VERSION 1.0
     QML_FILES Main.qml App.qml ResultPane.qml
     SOURCES MemoryLatency.h
+    RESOURCE_PREFIX /qt/qml/
 )
 
 set_target_properties(appuntitled2 PROPERTIES
