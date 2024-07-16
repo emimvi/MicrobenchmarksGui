@@ -10,10 +10,6 @@ __declspec(dllexport) float __stdcall RunAsmLatencyTest(uint32_t size_kb, uint64
 __declspec(dllexport) float __stdcall RunLatencyTest(uint32_t size_kb, uint64_t iterations);
 __declspec(dllexport) int __stdcall SetLargePages(uint32_t enable);
 
-float RunTest(uint32_t size_kb, uint32_t iterations) {
-    return RunLatencyTest(size_kb, iterations);
-}
-
 uint32_t* preallocate_arr(uint32_t size_kb) { return NULL; }
 void free_preallocate_arr(uint32_t* preallocatedArr, uint32_t size_kb) {}
 

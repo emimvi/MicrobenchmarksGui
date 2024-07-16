@@ -69,27 +69,19 @@ class LatencyRunner : public TestRunner {
 
     void run() override {
         const static QString pageNames[]{ "Default Pages", "Large Pages" };
-        emit testStarted("ASM, " + pageNames[hugePages]);
+        const static QString accessNames[]{ "C", "ASM" };
+        emit testStarted(accessNames[asmTest] + ", " + pageNames[hugePages]);
 
         static std::vector<int> default_test_sizes { 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 600, 768, 1024, 1536, 2048,
             3072, 4096, 5120, 6144, 8192, 10240, 12288, 16384, 24567, 32768, 65536, 98304, 131072, 262144, 393216, 524288, 1048576 }; //2097152 };
-        uint32_t* prealloc_arr = nullptr;
-        if (hugePages) {
-            prealloc_arr = preallocate_arr(default_test_sizes.back());
-            if (prealloc_arr == (void *)-1) { // on failure, mmap will return MAP_FAILED, or (void *)-1
-                prealloc_arr = nullptr;
-                return; //TODO error handling;
-            }
-        }
+
+        SetLargePages( hugePages );
         for (const auto size : default_test_sizes){
             if (isInterruptionRequested()) {
                 break;
             }
-            float latency = asmTest ? RunAsmLatencyTest(size, numIterations) : RunTest(size, numIterations, prealloc_arr);
+            float latency = asmTest ? RunAsmLatencyTest(size, numIterations) : RunLatencyTest(size, numIterations);
             emit resultReady(size, latency);
-        }
-        if (prealloc_arr) {
-            free_preallocate_arr(prealloc_arr, default_test_sizes.back());
         }
     }
 public:
