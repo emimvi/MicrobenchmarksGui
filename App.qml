@@ -11,9 +11,8 @@ ApplicationWindow {
 
     property alias hasAvx : main.hasAvx
     property alias hasAvx512 : main.hasAvx512
-    property alias tableModel : main.tableModel
-    property alias resultsModel : main.resultsModel
     property alias memLat : main.memLat
+    property alias memLatRunner : main.memLatRunner
     Main {
         id: main
     }

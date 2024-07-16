@@ -18,43 +18,59 @@ enum CustomRoles {
     ExportJS
 };
 
-class Results : public QStandardItemModel {
-    Q_OBJECT
-    std::vector<QStandardItemModel*> models;
-    QIdentityProxyModel* latestModel;
-
+class ResultItem : public QStandardItem {
 public:
-    Results() : QStandardItemModel(), latestModel(new QIdentityProxyModel(this)) {
-        auto roleNames = this->roleNames();
-        roleNames.insert(CustomRoles::TableModel, "itemModel");
-        roleNames.insert(CustomRoles::ExportCSV, "exportCSV");
-        roleNames.insert(CustomRoles::ExportJS, "exportJS");
-        setItemRoleNames(roleNames);
-    }
-
-    int prepareResultModel() {
-        auto model = new QStandardItemModel{0, 2, this};
-        latestModel->setSourceModel(model);
-        models.push_back(model);
-
-        auto i = new QStandardItem{"Bla Bla"};
-        appendRow(i);
-
-        return models.size() - 1;
-    }
-
-    QAbstractItemModel* latestResultModel() {
-        return latestModel;
-    }
-
-    Q_INVOKABLE QAbstractItemModel* getModel(int i) {
-        return models[i];
+    ResultItem(QString text) : QStandardItem(text) {}
+    ~ResultItem() {
+        if (auto model = data().value<QStandardItemModel*>()) {
+            model->deleteLater();
+        }
     }
 };
 
-class LatencyRunner : public QThread {
+struct ResultFormat {
+    QString csvHeader;
+    QStringList tableHeaderLabels;
+    QString keyFormat;
+    QString valueFormat;
+};
+
+ResultFormat memoryLatencyFormat {
+    "Data Size (KB), Latency (ns)\n",
+    {"Data Size", "Latency"},
+    "%1 KB",
+    "%1 ns"
+};
+
+
+class TestRunner : public QThread {
     Q_OBJECT
+public:
+    Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
+
+    TestRunner() {
+        connect(this, &QThread::started, this, &TestRunner::runningChanged);
+        connect(this, &QThread::finished, this, &TestRunner::runningChanged);
+    };
+
+    Q_INVOKABLE void cancelRun() {
+        requestInterruption();
+    }
+
+signals:
+    void runningChanged();
+    void testStarted(const QString& title);
+    void resultReady(int size, float value);
+
+};
+
+class LatencyRunner : public TestRunner {
+    Q_OBJECT
+
     void run() override {
+        const static QString pageNames[]{ "Default Pages", "Large Pages" };
+        emit testStarted("ASM, " + pageNames[hugePages]);
+
         static std::vector<int> default_test_sizes { 2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 600, 768, 1024, 1536, 2048,
             3072, 4096, 5120, 6144, 8192, 10240, 12288, 16384, 24567, 32768, 65536, 98304, 131072, 262144, 393216, 524288, 1048576 }; //2097152 };
         uint32_t* prealloc_arr = nullptr;
@@ -77,75 +93,87 @@ class LatencyRunner : public QThread {
         }
     }
 public:
+    Q_INVOKABLE void run(bool hugePages, size_t numIterations) {
+        if (isRunning()) {
+            throw std::logic_error("Another run already in progress");
+        }
+        this->hugePages = hugePages;
+        this->numIterations = numIterations;
+        start();
+    }
+
     bool hugePages = false;
     unsigned int numIterations = 100000000;
-signals:
-    void resultReady(int size, float latency);
 };
 
-class MemoryLatency : public QObject {
+class ResultsModel : public QObject {
     Q_OBJECT
 
-    Results& results;
-    QStandardItemModel* model;
-    int modelIdx;
-    LatencyRunner runner;
+    QStandardItemModel* results;
+    QStandardItemModel* model = nullptr;
+    QPersistentModelIndex runningIndex;
+    QIdentityProxyModel* latestModel;
+    ResultFormat format;
 
-signals:
-    void runningChanged();
 public:
 
-    bool isRunning() {
-        return runner.isRunning();
-    }
-
-    Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
-
-    void addResult(int idx, int size, float latency) {
-            auto a = new QStandardItem{QString::number(size)};
-            a->setData(QString("%1 KB").arg(size));
-            auto b = new QStandardItem{QString::number(latency)};
-            b->setData(QString("%1 ns").arg(latency));
-            model->appendRow({a, b});
-    }
-
-    MemoryLatency(Results& results): results(results) {
-        connect(&runner, &QThread::started, this, &MemoryLatency::runningChanged);
-        connect(&runner, &QThread::finished, this, &MemoryLatency::runningChanged);
-
-        connect(&runner, &LatencyRunner::resultReady, this, &MemoryLatency::addResult);
-        connect(&runner, &QThread::finished, this, [this](){
-            QString res {"Data Size (KB),Latency (ns)\n"};
-            for (int i = 0; i < model->rowCount(); i++){
-                QString size = model->data(model->index(i, 0)).toString();
-                QString latency = model->data(model->index(i, 1)).toString();
-                res += size + ',' + latency + '\n';
-            }
-            this->results.setData(this->results.index(modelIdx, 0), res, CustomRoles::ExportCSV);
-        });
-    }
-
-    Q_INVOKABLE void cancelRun() {
-        runner.requestInterruption();
-    }
-
-    Q_INVOKABLE void run(bool hugePages, int iterations) {
-        if (runner.isRunning()) {
-            // TODO: Error handling
+    void addResult(int size, float value) {
+        if (!runningIndex.isValid()) {
             return;
         }
-        const static QString pageNames[] { "Default Pages", "Large Pages"};
-        modelIdx = results.prepareResultModel();
-        results.setData(results.index(modelIdx, 0), "ASM, " + pageNames[hugePages]);
-        model = (QStandardItemModel*) results.getModel(modelIdx);
+        auto model = results->data(runningIndex, CustomRoles::TableModel).value<QStandardItemModel*>();
+        auto a = new QStandardItem{QString::number(size)};
+        a->setData(format.keyFormat.arg(size));
+        auto b = new QStandardItem{QString::number(value)};
+        b->setData(format.valueFormat.arg(value));
+        model->appendRow({a, b});
+    }
+
+    void generateCSV() {
+        if (!runningIndex.isValid()) {
+            return;
+        }
+        QString res {this->format.csvHeader};
+        for (int i = 0; i < model->rowCount(); i++){
+            QString size = model->data(model->index(i, 0)).toString();
+            QString value = model->data(model->index(i, 1)).toString();
+            res += size + ',' + value + '\n';
+        }
+        this->results->setData(runningIndex, res, CustomRoles::ExportCSV);
+    }
+
+    ResultsModel(ResultFormat format) : format(format), results(new QStandardItemModel(this)), latestModel(new QIdentityProxyModel(this)){ }
+
+    Q_INVOKABLE QAbstractItemModel* resultsModel() {
+        return results;
+    }
+
+    Q_INVOKABLE QAbstractItemModel* latestResultModel() {
+        return latestModel;
+    }
+
+    void prepareResult(const QString& title) {
+        // Prepare the result
+        model = new QStandardItemModel(this);
         auto roleNames = model->roleNames();
         roleNames.insert(Qt::UserRole + 1, "formattedRole");
         model->setItemRoleNames(roleNames);
-        model->setHorizontalHeaderLabels({"Data Size", "Latency"});
-        model->setRowCount(0);
-        runner.hugePages = hugePages;
-        runner.numIterations = iterations;
-        runner.start();
+        model->setHorizontalHeaderLabels(format.tableHeaderLabels);
+        latestModel->setSourceModel(model);
+
+        // GUI crashes if the proxy model is not manually reset
+        auto currentModel = model;
+        connect(model, &QObject::destroyed, latestModel, [this, currentModel]() {
+            if (model == currentModel) {
+                latestModel->setSourceModel(nullptr);
+            }
+        });
+
+        // Append to existing results
+        auto resultItem = new ResultItem{title};
+        resultItem->setData(QVariant::fromValue(model));
+        results->appendRow(resultItem);
+        runningIndex = results->indexFromItem(resultItem);
     }
 };
 
@@ -159,15 +187,17 @@ int main(int argc, char *argv[])
         &app, []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
-    Results results;
-    MemoryLatency memLat{results};
+    LatencyRunner runner;
+    ResultsModel memLat(memoryLatencyFormat);
+    QObject::connect(&runner, &TestRunner::testStarted, &memLat, &ResultsModel::prepareResult);
+    QObject::connect(&runner, &TestRunner::resultReady, &memLat, &ResultsModel::addResult);
+    QObject::connect(&runner, &QThread::finished, &memLat, &ResultsModel::generateCSV);
 
     engine.setInitialProperties(
         {
          {"hasAvx", false},
          {"hasAvx512", false},
-         {"resultsModel", QVariant::fromValue(&results)},
-         {"tableModel", QVariant::fromValue(results.latestResultModel())},
+         {"memLatRunner", QVariant::fromValue(&runner)},
          {"memLat", QVariant::fromValue(&memLat)},
         } );
     engine.load(url);

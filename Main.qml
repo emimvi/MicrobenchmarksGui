@@ -9,9 +9,8 @@ Pane {
     id: root
     property alias hasAvx : avxButton.enabled
     property alias hasAvx512 : avx512Button.enabled
-    property QtObject tableModel
-    property QtObject resultsModel // ListModel<TableModel>
-    property QtObject memLat // Test runner
+    property QtObject memLat // Test results
+    property QtObject memLatRunner // Test runner
 
     ColumnLayout {
         anchors.fill: parent
@@ -56,11 +55,16 @@ Pane {
                         title: "Threading Mode"
                         ColumnLayout {
                             RadioButton {
+                                id : privateArray
                                 checked: true
                                 text: "Private array per thread"
                             }
                             RadioButton {
+                                enabled : dataReadButton.checked || instructionFetchButton.checked
                                 text: "One array shared by all threads"
+                                onEnabledChanged: enabled => {
+                                                      if (!enabled) privateArray.checked = true
+                                                  }
                             }
                         }
                     }
@@ -68,12 +72,15 @@ Pane {
                         Layout.fillWidth: true
                         title: "Access Mode"
                         ColumnLayout {
+                            id : accessModelOptions
                             RadioButton {
+                                id: dataReadButton
                                 checked: true
                                 text: "Data Read"
                             }
                             RadioButton {
-                                text: "Data Non-Temporal Read"
+                                id: dataStringOpsButton
+                                text: "Data Microcoded String Ops"
                             }
                             RadioButton {
                                 text: "Data Write"
@@ -85,6 +92,7 @@ Pane {
                                 text: "Data Read-Modify-Write (Add)"
                             }
                             RadioButton {
+                                id : instructionFetchButton
                                 text: "Instruction Fetch"
                             }
                         }
@@ -92,7 +100,10 @@ Pane {
                     GroupBox {
                         Layout.fillWidth: true
                         title: "Test Method"
+                        visible : !(dataStringOpsButton.checked || instructionFetchButton.checked)
                         ColumnLayout {
+                            id : vectorOpOptions
+                            anchors.fill : parent
                             RadioButton {
                                 checked: true
                                 text: "SSE (128-bit)"
@@ -107,6 +118,48 @@ Pane {
                             }
                             RadioButton {
                                 text: "MMX (64-bit)"
+                            }
+                        }
+                    }
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "Test Method"
+                        visible : dataStringOpsButton.checked
+                        ColumnLayout {
+                            id : dataStringOptions
+                            RadioButton {
+                                checked: true
+                                text: "4B NOPs (0F 1F 40 00)"
+                            }
+                            RadioButton {
+                                text: "8B NOPs (0F 1F 84 00 00 00 00 00)"
+                            }
+                            RadioButton {
+                                text: "4B NOPs (66 66 66 90)"
+                            }
+                            RadioButton {
+                                text: "Taken Branch Per 16B"
+                            }
+                        }
+                    }
+                    GroupBox {
+                        Layout.fillWidth: true
+                        title: "Test Method"
+                        visible : instructionFetchButton.checked
+                        ColumnLayout {
+                            id : instructionFetchOptions
+                            RadioButton {
+                                checked: true
+                                text: "REP MOVSB (Copy)"
+                            }
+                            RadioButton {
+                                text: "REP STOSB (Write)"
+                            }
+                            RadioButton {
+                                text: "REP MOVSD (Copy)"
+                            }
+                            RadioButton {
+                                text: "REP STOSD (Write)"
                             }
                         }
                     }
@@ -171,14 +224,14 @@ Pane {
             }
             RowLayout {
                 Button {
-                    enabled : !memLat.running
+                    enabled : !memLatRunner.running
                     text: "Run"
-                    onClicked: memLat.run(!defaultPagesButton.checked, Number(iterationsText.text))
+                    onClicked: memLatRunner.run(!defaultPagesButton.checked, Number(iterationsText.text))
                 }
                 Button {
-                    enabled : memLat.running
+                    enabled : memLatRunner.running
                     text: "Cancel Run"
-                    onClicked: memLat.cancelRun()
+                    onClicked: memLatRunner.cancelRun()
                 }
             }
         }
@@ -188,8 +241,8 @@ Pane {
             ResultPane {
             }
             ResultPane {
-                resultsModel : root.resultsModel
-                tableModel : root.tableModel
+                resultsModel : memLat.resultsModel()
+                tableModel : memLat.latestResultModel()
             }
         }
     }

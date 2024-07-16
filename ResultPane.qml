@@ -15,8 +15,8 @@ RowLayout {
                 text: qsTr("Run Progress:")
             }
             Text {
-                //TODO : Don't depend on memLat
-                text: memLat.running ? 'Running...' : qsTr("Run Finished")
+                //TODO : Don't depend on memLatRunner
+                text: memLatRunner.running ? 'Running...' : qsTr("Run Finished")
             }
         }
         HorizontalHeaderView {
@@ -202,7 +202,7 @@ RowLayout {
                 onObjectAdded: {
                     var resName = resultsModel.data(resultsModel.index(index, 0))
                     var series = chartView.createSeries(ChartView.SeriesTypeLine, resName, axisX, axisY)
-                    var model = resultsModel.getModel(index)
+                    var model = resultsModel.data(resultsModel.index(index, 0), 0x101)
                     object.model = model
                     object.series = series
 
